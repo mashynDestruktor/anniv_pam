@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Happy Birthday Duel — PAM</title>
+<style>
+  /* ============================================================
+     CONFIG — edit these two lines if you like
+     ============================================================ */
+  /* (kept in JS below — see CONFIG object) */
+
+  :root{
+    --gold:#f4c542;
+    --gold-deep:#b8860b;
+    --bg:#0b0e1a;
+    --bg2:#141a30;
+    --card-bg:#1c2444;
+    --accent:#7b5cff;
+    --hp-green:#3ddc84;
+    --hp-red:#ff5252;
+    --ink:#eef2ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2a2160 0%, transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, #1b2a5e 0%, transparent 55%),
+      linear-gradient(160deg,var(--bg),var(--bg2));
+    color:var(--ink);
+    min-height:100%;
+    overflow-x:hidden;
+  }
+  .stage{
+    max-width:920px;margin:0 auto;padding:18px 16px 60px;
+    min-height:100vh;display:flex;flex-direction:column;
+  }
+  .screen{display:none;animation:fade .5s ease both;}
+  .screen.active{display:flex;flex-direction:column;flex:1;}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* ---------- Title ---------- */
+  .title-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:18px;}
+  .kicker{letter-spacing:.35em;font-size:.8rem;color:var(--gold);text-transform:uppercase;}
+  h1{
+    font-size:clamp(2.2rem,8vw,4rem);margin:0;line-height:1.05;
+    background:linear-gradient(180deg,#fff,var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 4px 30px rgba(244,197,66,.25);
+  }
+  .subtitle{font-size:1.05rem;max-width:520px;color:#c7d0f5;line-height:1.5;}
+  .sig{font-size:.95rem;color:#9aa6df;}
+  .sig b{color:var(--gold);}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    border:none;cursor:pointer;font-family:inherit;font-weight:700;
+    padding:14px 30px;border-radius:14px;font-size:1.05rem;color:#1a1300;
+    background:linear-gradient(180deg,#ffe082,var(--gold));
+    box-shadow:0 8px 24px rgba(244,197,66,.35),inset 0 1px 0 rgba(255,255,255,.6);
+    transition:transform .12s ease,box-shadow .12s ease;
+  }
+  .btn:active{transform:translateY(2px) scale(.99);}
+  .btn:disabled{opacity:.45;cursor:default;filter:grayscale(.4);}
+  .btn.ghost{
+    background:transparent;color:var(--gold);border:2px solid var(--gold-deep);
+    box-shadow:none;
+  }
+
+  /* ---------- Duel field ---------- */
+  .duel-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;}
+  .player-tag{display:flex;align-items:center;gap:10px;}
+  .avatar{
+    width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:1.7rem;
+    background:linear-gradient(150deg,var(--accent),#4a2fb0);box-shadow:0 4px 16px rgba(123,92,255,.4);
+    flex:none;
+  }
+  .avatar.foe{background:linear-gradient(150deg,#ff6f91,#c2185b);box-shadow:0 4px 16px rgba(255,111,145,.4);}
+  .pname{font-weight:700;}
+  .ptiny{font-size:.72rem;color:#9aa6df;text-transform:uppercase;letter-spacing:.1em;}
+  .hp{font-variant-numeric:tabular-nums;font-weight:700;color:var(--gold);}
+  .hpbar{height:9px;border-radius:6px;background:#0006;overflow:hidden;margin-top:5px;width:140px;max-width:38vw;}
+  .hpfill{height:100%;background:linear-gradient(90deg,var(--hp-green),#1faa5e);transition:width .6s cubic-bezier(.4,1.3,.5,1);}
+  .hpfill.low{background:linear-gradient(90deg,#ffb300,var(--hp-red));}
+
+  .field{
+    flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:8px;
+    margin:6px 0;padding:10px;border-radius:18px;
+    background:
+      radial-gradient(600px 200px at 50% 50%, rgba(123,92,255,.10), transparent 70%),
+      repeating-linear-gradient(135deg,#ffffff06 0 2px,transparent 2px 22px);
+    border:1px solid #ffffff12;min-height:0;
+  }
+  .row{display:flex;justify-content:center;align-items:center;gap:14px;min-height:0;}
+  .slot-label{text-align:center;font-size:.7rem;letter-spacing:.15em;color:#7e89c4;text-transform:uppercase;}
+
+  /* ---------- Cards ---------- */
+  .card{
+    width:150px;max-width:40vw;border-radius:12px;padding:8px;flex:none;
+    background:linear-gradient(160deg,#33407a,var(--card-bg));
+    border:2px solid var(--gold-deep);
+    box-shadow:0 10px 24px #0007, inset 0 1px 0 #ffffff30;
+    position:relative;animation:summon .5s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  .card.foe{border-color:#7a2a45;}
+  @keyframes summon{from{opacity:0;transform:rotateY(90deg) scale(.8)}to{opacity:1;transform:none}}
+  .card .art{
+    height:84px;border-radius:8px;display:grid;place-items:center;font-size:3rem;
+    background:radial-gradient(circle at 50% 30%,#fff3,transparent 60%),linear-gradient(160deg,#4a3aa0,#23306b);
+    border:1px solid #ffffff25;
+  }
+  .card.foe .art{background:radial-gradient(circle at 50% 30%,#fff3,transparent 60%),linear-gradient(160deg,#7a2a45,#3a1226);}
+  .card .cname{font-weight:700;font-size:.86rem;margin:6px 2px 2px;line-height:1.1;}
+  .card .ctype{font-size:.62rem;color:#b9c2f0;margin:0 2px;text-transform:uppercase;letter-spacing:.08em;}
+  .card .stats{display:flex;justify-content:space-between;margin-top:6px;font-size:.78rem;font-weight:700;}
+  .card .atk{color:#ffd35b;}
+  .card .def{color:#7fd1ff;}
+  .card.attacking{animation:lunge .5s ease;}
+  @keyframes lunge{30%{transform:translateY(-26px) scale(1.05)}60%{transform:translateY(6px)}100%{transform:none}}
+  .card.dying{animation:die .6s ease forwards;}
+  @keyframes die{to{opacity:0;transform:scale(.6) rotate(8deg);filter:grayscale(1) brightness(.4)}}
+  .empty-slot{
+    width:150px;max-width:40vw;height:150px;border-radius:12px;border:2px dashed #ffffff22;flex:none;
+    display:grid;place-items:center;color:#5663a0;font-size:.75rem;text-align:center;padding:8px;
+  }
+
+  /* ---------- Speech bubble ---------- */
+  .bubble{
+    position:relative;max-width:560px;margin:0 auto;background:#fff;color:#1a2040;
+    padding:14px 18px;border-radius:16px;font-size:1rem;line-height:1.45;font-weight:600;
+    box-shadow:0 10px 30px #0008;animation:pop .35s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  .bubble .who{display:block;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:3px;}
+  .bubble.foe .who{color:#c2185b;}
+  @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+
+  /* ---------- Action bar ---------- */
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding-top:4px;min-height:56px;align-items:center;}
+  .hint{color:#9aa6df;font-size:.9rem;text-align:center;}
+
+  /* ---------- Victory ---------- */
+  .victory-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;}
+  .trophy{font-size:4rem;animation:bounce 1.2s ease infinite;}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+  /* ---------- Meals ---------- */
+  .meals-head{text-align:center;margin:8px 0 2px;}
+  .meals-head h2{margin:0 0 4px;font-size:1.6rem;color:var(--gold);}
+  .meals-head p{margin:0;color:#c7d0f5;font-size:.95rem;}
+  .meals{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:20px;}
+  .meal{
+    width:230px;max-width:88vw;border-radius:18px;overflow:hidden;cursor:pointer;
+    background:linear-gradient(160deg,#33407a,#1c2444);
+    border:2px solid var(--gold-deep);box-shadow:0 12px 30px #0008;position:relative;
+    transition:transform .15s ease,box-shadow .15s ease;
+  }
+  .meal:hover{transform:translateY(-5px);box-shadow:0 18px 40px #000a;}
+  .meal .mart{height:130px;display:grid;place-items:center;font-size:4rem;}
+  .meal.cn .mart{background:linear-gradient(160deg,#e53935,#b71c1c);}
+  .meal.kr .mart{background:linear-gradient(160deg,#1e88e5,#3949ab);}
+  .meal.jp .mart{background:linear-gradient(160deg,#ec407a,#ad1457);}
+  .meal .mbody{padding:14px 16px;}
+  .meal .mtitle{font-weight:700;font-size:1.15rem;margin-bottom:3px;}
+  .meal .mdesc{font-size:.85rem;color:#c7d0f5;line-height:1.4;min-height:38px;}
+  .meal .mcta{margin-top:10px;text-align:center;font-weight:700;color:var(--gold);font-size:.95rem;}
+  .meal.used{cursor:default;filter:saturate(.5);}
+  .meal.used:hover{transform:none;box-shadow:0 12px 30px #0008;}
+  .stamp{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-18deg);
+    border:5px solid #ff5252;color:#ff5252;font-weight:900;font-size:1.6rem;letter-spacing:.1em;
+    padding:6px 18px;border-radius:10px;background:#0008;display:none;text-transform:uppercase;
+  }
+  .meal.used .stamp{display:block;}
+  .meal.used .mcta{color:#9aa6df;}
+
+  /* ---------- Modal ---------- */
+  .modal-bg{
+    position:fixed;inset:0;background:#000a;display:none;place-items:center;padding:20px;z-index:50;
+    backdrop-filter:blur(3px);
+  }
+  .modal-bg.open{display:grid;}
+  .modal{
+    background:linear-gradient(160deg,#222c54,#161d38);border:2px solid var(--gold-deep);
+    border-radius:20px;padding:24px;max-width:380px;width:100%;text-align:center;
+    box-shadow:0 20px 60px #000b;animation:pop .3s ease both;
+  }
+  .modal h3{margin:0 0 8px;color:var(--gold);}
+  .modal p{margin:0 0 18px;color:#d6ddff;line-height:1.5;}
+  .modal .row2{display:flex;gap:10px;}
+  .modal .btn{flex:1;padding:12px;}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120%);
+    background:#1f2950;border:1px solid var(--gold-deep);color:var(--ink);
+    padding:13px 20px;border-radius:14px;box-shadow:0 12px 30px #000a;z-index:60;
+    transition:transform .4s cubic-bezier(.2,1.4,.4,1);max-width:90vw;text-align:center;font-weight:600;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  .footer{text-align:center;color:#5663a0;font-size:.75rem;margin-top:18px;}
+  .footer a{color:#7e89c4;}
+
+  /* confetti */
+  .confetti{position:fixed;top:-10px;width:10px;height:14px;z-index:40;pointer-events:none;border-radius:2px;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===================== TITLE ===================== -->
+  <section id="screen-title" class="screen active">
+    <div class="title-wrap">
+      <div class="kicker">A Birthday Duel</div>
+      <h1>Happy Birthday,<br>PAM!</h1>
+      <p class="subtitle">Gautier has challenged you to a duel — and your sister Marine has your back.
+        Win the duel to unlock your birthday gift. 🎴</p>
+      <button class="btn" onclick="startDuel()">⚔️ Begin the Duel</button>
+      <p class="sig">From <b>Gautier</b> &amp; <b>Marine</b>, with love.</p>
+    </div>
+  </section>
+
+  <!-- ===================== DUEL ===================== -->
+  <section id="screen-duel" class="screen">
+    <div class="duel-top">
+      <div class="player-tag">
+        <div class="avatar foe">🧑‍💼</div>
+        <div>
+          <div class="pname">Gautier</div>
+          <div class="ptiny">The Challenger</div>
+          <div class="hp">LP <span id="foe-hp">3000</span></div>
+          <div class="hpbar"><div id="foe-hpfill" class="hpfill" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div class="player-tag" style="text-align:right;flex-direction:row-reverse;">
+        <div class="avatar">🎂</div>
+        <div style="text-align:right">
+          <div class="pname">PAM</div>
+          <div class="ptiny">The Birthday Boy</div>
+          <div class="hp">LP <span id="me-hp">4000</span></div>
+          <div class="hpbar" style="margin-left:auto"><div id="me-hpfill" class="hpfill" style="width:100%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div>
+        <div class="slot-label">Gautier's Monster</div>
+        <div class="row" id="foe-row">
+          <div class="empty-slot">No monster<br>on the field</div>
+        </div>
+      </div>
+
+      <div id="bubble-host" style="margin:6px 0;"></div>
+
+      <div>
+        <div class="slot-label">Your Monster</div>
+        <div class="row" id="me-row">
+          <div class="empty-slot">Summon your<br>guardian</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions" id="duel-actions"></div>
+  </section>
+
+  <!-- ===================== VICTORY + MEALS ===================== -->
+  <section id="screen-win" class="screen">
+    <div class="victory-wrap">
+      <div class="trophy">🏆</div>
+      <h1 style="font-size:clamp(1.8rem,7vw,3rem)">You Win!</h1>
+      <p class="subtitle">The duel is yours, PAM. Marine &amp; Gautier are proud. 🎉<br>
+        Here's your birthday gift: <b>three meals delivered to your door.</b></p>
+
+      <div class="meals-head" style="margin-top:18px;">
+        <h2>🎁 Your Birthday Feast</h2>
+        <p>Tap a meal to redeem it. We'll get it delivered to your home.</p>
+      </div>
+
+      <div class="meals" id="meals"></div>
+
+      <div class="footer">
+        Redeemed meals are remembered on this device.<br>
+        <a href="#" onclick="resetGift(event)">reset gift</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- modal + toast -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Redeem this meal?</h3>
+    <p id="modal-text"></p>
+    <div class="row2">
+      <button class="btn ghost" onclick="closeModal()">Not yet</button>
+      <button class="btn" id="modal-confirm">Redeem 🍽️</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const CONFIG = {
+  // Where the meal-choice notification is sent:
+  notifyEmail: "moulingautier@gmail.com",
+  // OPTIONAL: paste a free Web3Forms access key (https://web3forms.com) to
+  // auto-send the email silently. Leave "" to use the mailto fallback instead.
+  web3formsKey: ""
+};
+
+/* ============================================================
+   GAME STATE — scripted, short, and guaranteed winnable
+   ============================================================ */
+let foeHP = 3000, meHP = 4000;
+const FOE_START = 3000, ME_START = 4000;
+
+const MARINE = { name:"Marine, Birthday Guardian", type:"★★★★★★★ Effect Monster", art:"🦸‍♀️", atk:2800, def:2000, foe:false };
+const FOE1   = { name:"Sneaky Gift Snatcher",       type:"★★★ Fiend",                art:"😈", atk:800,  def:600,  foe:true };
+const FOE2   = { name:"Birthday Party Pooper",      type:"★★ Fiend",                 art:"💩", atk:400,  def:1000, foe:true };
+
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+
+function show(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(screen).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function bubble(who, text, isFoe){
+  const host = $('bubble-host');
+  host.innerHTML = `<div class="bubble ${isFoe?'foe':''}"><span class="who">${who}</span>${text}</div>`;
+}
+
+function renderCard(m){
+  return `<div class="card ${m.foe?'foe':''}" id="card-${m.foe?'foe':'me'}">
+      <div class="art">${m.art}</div>
+      <div class="cname">${m.name}</div>
+      <div class="ctype">${m.type}</div>
+      <div class="stats"><span class="atk">ATK ${m.atk}</span><span class="def">DEF ${m.def}</span></div>
+    </div>`;
+}
+
+function setHP(side, val){
+  const start = side==='foe'?FOE_START:ME_START;
+  val = Math.max(0,val);
+  if(side==='foe') foeHP=val; else meHP=val;
+  $(side+'-hp').textContent = val;
+  const fill = $(side+'-hpfill');
+  const pct = Math.max(0,(val/start)*100);
+  fill.style.width = pct+'%';
+  fill.classList.toggle('low', pct<=35);
+}
+
+function setActions(html){ $('duel-actions').innerHTML = html; }
+
+/* ---------------- Duel flow (linear flowchart) ---------------- */
+function startDuel(){
+  foeHP=FOE_START; meHP=ME_START;
+  show('screen-duel');
+  setHP('foe',FOE_START); setHP('me',ME_START);
+  $('foe-row').innerHTML = `<div class="empty-slot">No monster<br>on the field</div>`;
+  $('me-row').innerHTML  = `<div class="empty-slot">Summon your<br>guardian</div>`;
+  foeOpensDuel();
+}
+
+async function foeOpensDuel(){
+  bubble('Gautier', "Joyeux anniversaire, little brother! 🎉 But a birthday isn't free — beat me in a duel first. I'll go easy… mostly. 😏", true);
+  setActions(`<span class="hint">Gautier summons a monster…</span>`);
+  await wait(1700);
+  $('foe-row').innerHTML = renderCard(FOE1);
+  await wait(900);
+  bubble('Gautier', "Go, Sneaky Gift Snatcher! Try to steal his presents! 😈", true);
+  await wait(1400);
+  promptSummonMarine();
+}
+
+function promptSummonMarine(){
+  bubble('You', "Your turn, PAM. Call your sister to the field. 💪");
+  setActions(`<button class="btn" onclick="summonMarine()">✨ Summon Marine</button>`);
+}
+
+async function summonMarine(){
+  setActions(`<span class="hint">Summoning…</span>`);
+  $('me-row').innerHTML = renderCard(MARINE);
+  await wait(700);
+  bubble('Marine', "Happy birthday, PAM!! 🥳 I came all this way to fight by your side. Nobody messes with my brother — let's win this! 💖");
+  await wait(1900);
+  bubble('You', "Marine's ATK 2800 vs that little Snatcher (800). Attack!");
+  setActions(`<button class="btn" onclick="attack(1)">⚔️ Attack the Snatcher</button>`);
+}
+
+async function attack(phase){
+  setActions(`<span class="hint">Attacking…</span>`);
+  const me = $('card-me');
+  me && me.classList.add('attacking');
+  await wait(420);
+
+  if(phase===1){
+    const foe = $('card-foe');
+    foe && foe.classList.add('dying');
+    await wait(450);
+    const dmg = MARINE.atk - FOE1.atk; // 2000
+    setHP('foe', foeHP - dmg);
+    spark();
+    await wait(650);
+    $('foe-row').innerHTML = `<div class="empty-slot">No monster<br>on the field</div>`;
+    bubble('Gautier', `Argh! Direct hit — ${dmg} damage! 😣 Fine, I'll throw out one more…`, true);
+    await wait(1500);
+    $('foe-row').innerHTML = renderCard(FOE2);
+    await wait(900);
+    bubble('You', "One more push, PAM. Marine 2800 vs Party Pooper 400. Finish it! 🔥");
+    setActions(`<button class="btn" onclick="attack(2)">⚔️ Finishing Blow</button>`);
+  } else {
+    const foe = $('card-foe');
+    foe && foe.classList.add('dying');
+    await wait(450);
+    setHP('foe', 0);
+    spark();
+    await wait(650);
+    $('foe-row').innerHTML = `<div class="empty-slot">No monster<br>on the field</div>`;
+    bubble('Gautier', "GG, you got me! 🏳️ Happiest of birthdays, bro. You earned your reward. 🎂", true);
+    setActions(`<button class="btn" onclick="winGame()">🎁 Claim your gift</button>`);
+  }
+}
+
+function winGame(){
+  show('screen-win');
+  renderMeals();
+  partyConfetti();
+}
+
+/* ============================================================
+   MEALS / GIFT
+   ============================================================ */
+const MEALS = [
+  { id:'chinese',  cls:'cn', emoji:'🥡', title:'Chinese Feast',  desc:'Dumplings, noodles & all the trimmings — delivered hot to your door.' },
+  { id:'korean',   cls:'kr', emoji:'🍲', title:'Korean Feast',   desc:'Korean BBQ, kimchi & bibimbap goodness, brought to you.' },
+  { id:'japanese', cls:'jp', emoji:'🍣', title:'Japanese Feast', desc:'Fresh sushi, ramen & sides — straight to your home.' }
+];
+
+const STORE_KEY = 'pam_meals_used_v1';
+function getUsed(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ return {}; } }
+function setUsed(u){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(u)); }catch(e){} }
+
+function renderMeals(){
+  const used = getUsed();
+  $('meals').innerHTML = MEALS.map(m=>`
+    <div class="meal ${m.cls} ${used[m.id]?'used':''}" id="meal-${m.id}" onclick="onMealClick('${m.id}')">
+      <div class="stamp">Used</div>
+      <div class="mart">${m.emoji}</div>
+      <div class="mbody">
+        <div class="mtitle">${m.title}</div>
+        <div class="mdesc">${m.desc}</div>
+        <div class="mcta">${used[m.id] ? '✓ Redeemed' : 'Tap to redeem →'}</div>
+      </div>
+    </div>`).join('');
+}
+
+let pendingMeal = null;
+function onMealClick(id){
+  const used = getUsed();
+  if(used[id]) return;
+  const meal = MEALS.find(m=>m.id===id);
+  pendingMeal = meal;
+  $('modal-title').textContent = `Redeem your ${meal.title}?`;
+  $('modal-text').innerHTML = `We'll let <b>Gautier &amp; Marine</b> know you picked the <b>${meal.title}</b> ${meal.emoji} and get it delivered to your home. Ready?`;
+  $('modal').classList.add('open');
+}
+function closeModal(){ $('modal').classList.remove('open'); pendingMeal=null; }
+
+$('modal-confirm').addEventListener('click', async ()=>{
+  if(!pendingMeal) return;
+  const meal = pendingMeal;
+  $('modal-confirm').disabled = true;
+  $('modal-confirm').textContent = 'Sending…';
+  const ok = await notifyChoice(meal);
+  // mark used regardless (gift shouldn't break if email hiccups)
+  const used = getUsed(); used[meal.id]=true; setUsed(used);
+  closeModal();
+  $('modal-confirm').disabled = false;
+  $('modal-confirm').textContent = 'Redeem 🍽️';
+  renderMeals();
+  toast(ok ? `🎉 Nice pick! Your ${meal.title} is on the way.`
+           : `✓ ${meal.title} redeemed! (Tell Gautier if the email didn't open.)`);
+});
+
+/* ---- send the choice to Gautier ---- */
+async function notifyChoice(meal){
+  const subject = `🎂 PAM redeemed his ${meal.title}!`;
+  const body = `Great news — PAM just redeemed a birthday meal!\n\n`+
+               `Choice: ${meal.title} ${meal.emoji}\n`+
+               `When: ${new Date().toLocaleString()}\n\n`+
+               `Time to get it delivered to his home. 🍽️\n\n— The Birthday Duel app`;
+  // Preferred: silent auto-send via Web3Forms (if a key is configured)
+  if(CONFIG.web3formsKey){
+    try{
+      const res = await fetch('https://api.web3forms.com/submit',{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({
+          access_key:CONFIG.web3formsKey,
+          subject,
+          from_name:"PAM's Birthday Duel",
+          email:CONFIG.notifyEmail,
+          message:body,
+          meal_choice:meal.title
+        })
+      });
+      const data = await res.json();
+      if(data.success) return true;
+    }catch(e){ /* fall through to mailto */ }
+  }
+  // Fallback: open a pre-filled email the user can send
+  const url = `mailto:${CONFIG.notifyEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = url;
+  return false;
+}
+
+function resetGift(e){
+  e.preventDefault();
+  setUsed({});
+  renderMeals();
+  toast('Gift reset — all meals available again.');
+}
+
+/* ============================================================
+   FX — toast, sparkle, confetti
+   ============================================================ */
+let toastTimer;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),4200);
+}
+function spark(){
+  for(let i=0;i<10;i++){
+    const s=document.createElement('div');
+    s.textContent='✦';
+    s.style.cssText=`position:fixed;left:${40+Math.random()*20}vw;top:${30+Math.random()*25}vh;
+      font-size:${10+Math.random()*18}px;color:var(--gold);z-index:45;pointer-events:none;
+      transition:all .7s ease;opacity:1;`;
+    document.body.appendChild(s);
+    requestAnimationFrame(()=>{
+      s.style.transform=`translate(${(Math.random()-.5)*160}px,${(Math.random()-.5)*160}px) scale(0)`;
+      s.style.opacity='0';
+    });
+    setTimeout(()=>s.remove(),750);
+  }
+}
+function partyConfetti(){
+  const colors=['#f4c542','#7b5cff','#3ddc84','#ff6f91','#1e88e5','#fff'];
+  for(let i=0;i<80;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.transform=`rotate(${Math.random()*360}deg)`;
+    const dur=2.5+Math.random()*2;
+    c.style.transition=`transform ${dur}s linear, top ${dur}s linear, opacity ${dur}s ease`;
+    document.body.appendChild(c);
+    requestAnimationFrame(()=>{
+      c.style.top='105vh';
+      c.style.transform=`translateX(${(Math.random()-.5)*200}px) rotate(${Math.random()*720}deg)`;
+      c.style.opacity='0';
+    });
+    setTimeout(()=>c.remove(),dur*1000+200);
+  }
+}
+</script>
+</body>
+</html>
