@@ -121,6 +121,8 @@
   @keyframes lunge{30%{transform:translateY(-26px) scale(1.05)}60%{transform:translateY(6px)}100%{transform:none}}
   .card.dying{animation:die .6s ease forwards;}
   @keyframes die{to{opacity:0;transform:scale(.6) rotate(8deg);filter:grayscale(1) brightness(.4)}}
+  /* optional full-card artwork overlay (auto-used when img/ files exist) */
+  .card .cardart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;z-index:3;}
   /* compact cards for the whole-family finishing blow */
   .card.mini{width:108px;padding:6px;}
   .card.mini .art{height:54px;font-size:2rem;}
@@ -327,10 +329,11 @@ let foeHP = 8000, meHP = 8000;
 const FOE_START = 8000, ME_START = 8000;
 
 // PAM's family — his guardians
-const MARINE = { name:"Marine, Birthday Guardian",    type:"★★★★★★★ Effect Monster", art:"🦸‍♀️", atk:2800, def:2000, foe:false };
-const ALEXIS = { name:"Alexis the Mighty Baby",       type:"★★ Effect Monster",       art:"👶", atk:1200, def:600,  foe:false };
-const MAMAN  = { name:"Maman, Mad Chemistry Teacher", type:"★★★★★ Effect Monster",    art:"👩‍🔬", atk:2400, def:1800, foe:false };
-const PAPA   = { name:"Papa, Boardroom Tycoon",       type:"★★★★★★ Effect Monster",   art:"👨‍💼", atk:2600, def:2200, foe:false };
+// Drop matching PNGs in an img/ folder and they replace the emoji art automatically.
+const MARINE = { name:"Marine, Birthday Guardian",    type:"★★★★★★★ Effect Monster", art:"🦸‍♀️", atk:2800, def:2000, foe:false, img:"img/marine.png" };
+const ALEXIS = { name:"Alexis the Mighty Baby",       type:"★★ Effect Monster",       art:"👶", atk:1200, def:600,  foe:false, img:"img/alexis.png" };
+const MAMAN  = { name:"Maman, Mad Chemistry Teacher", type:"★★★★★ Effect Monster",    art:"👩‍🔬", atk:2400, def:1800, foe:false, img:"img/maman.png" };
+const PAPA   = { name:"Papa, Boardroom Tycoon",       type:"★★★★★★ Effect Monster",   art:"👨‍💼", atk:2600, def:2200, foe:false, img:"img/papa.png" };
 
 // Gautier's monsters
 const FOE1   = { name:"Sneaky Gift Snatcher",         type:"★★★ Fiend",     art:"😈", atk:800,  def:600,  foe:true };
@@ -353,7 +356,10 @@ function bubble(who, text, isFoe){
 
 function renderCard(m, id){
   id = id || (m.foe?'foe':'me');
+  // if an image is supplied, it covers the built card; if it 404s it removes itself (emoji fallback shows)
+  const img = m.img ? `<img class="cardart" src="${m.img}" alt="${m.name}" onerror="this.remove()">` : '';
   return `<div class="card ${m.foe?'foe':''}" id="card-${id}">
+      ${img}
       <div class="art">${m.art}</div>
       <div class="cname">${m.name}</div>
       <div class="ctype">${m.type}</div>
@@ -439,13 +445,9 @@ function step_marineAttack(){
 
 async function beat_marine(){
   setActions(`<span class="hint">Throwing the books…</span>`);
-  const a = $('card-me'); if(a) a.classList.add('attacking');
-  throwBooks();
-  await wait(560);
-  const t = $('card-foe'); if(t) t.classList.add('dying');
-  await wait(450);
-  spark();
-  await wait(550);
+  hurl(['📚','📕','📗','📘'],8);
+  await strike('me','foe');
+  burst('💥'); shake();
   setHP('foe', foeHP - 2000);
   clearFoe();
   bubble('Gautier', "Argh! 2000 damage — straight to the face with a textbook! 😣 Birthday Party Pooper, your turn!", true);
@@ -476,7 +478,10 @@ function step_alexisAttack(){
 }
 
 async function beat_alexis(){
+  setActions(`<span class="hint">Giggling…</span>`);
+  hurl(['💕','💗','✨','🥹','💖'],10);
   await strike('me','foe');
+  burst('💞'); shake();
   setHP('foe', foeHP - 1500);
   clearFoe();
   bubble('Gautier', "He's TOO adorable, I can't fight back! 😭 Okay — no more games. Meet my ACE!", true);
@@ -507,7 +512,10 @@ async function summonMaman(){
 }
 
 async function beat_maman(){
+  setActions(`<span class="hint">Mixing a volatile potion…</span>`);
+  hurl(['🧪','⚗️','💚','🔥'],9);
   await strike('me','foe',false);
+  burst('💥'); shake();
   setHP('foe', foeHP - 1500);
   bubble('Gautier', "Gah! Burn damage — 1500! But the Colossus is still standing! 😤", true);
   setActions(`<button class="btn" onclick="step_summonPapa()">Continue ▸</button>`);
@@ -527,7 +535,10 @@ async function summonPapa(){
 }
 
 async function beat_papa(){
+  setActions(`<span class="hint">Closing the deal…</span>`);
+  hurl(['💵','💰','📉','🪙','💸'],10);
   await strike('me','foe',false);
+  burst('💸'); shake();
   setHP('foe', foeHP - 1000);
   bubble('Gautier', "You're buying my own monster out from under me?! 😱 He's down to his knees…", true);
   setActions(`<button class="btn" onclick="step_finale()">Continue ▸</button>`);
@@ -547,8 +558,10 @@ async function beat_finale(){
     .join('');
   await wait(500);
   document.querySelectorAll('#me-row .card').forEach(c=>c.classList.add('attacking'));
-  await wait(420);
+  hurl(['📚','💕','🧪','💰','✨','🔥','💥'],16);
+  await wait(560);
   const foe = $('card-foe'); if(foe) foe.classList.add('dying');
+  burst('💥'); burst('🌟'); shake();
   spark(); spark();
   await wait(650);
   setHP('foe', 0);
@@ -682,26 +695,51 @@ function spark(){
     setTimeout(()=>s.remove(),750);
   }
 }
-function throwBooks(){
+// fling a stream of emoji projectiles from your active monster toward the enemy
+function hurl(emojis, count){
+  count = count || 6;
   const me = $('card-me') || document.querySelector('#me-row .card');
   const foe = $('card-foe');
   if(!me || !foe) return;
   const a = me.getBoundingClientRect(), b = foe.getBoundingClientRect();
-  for(let i=0;i<6;i++){
-    const bk=document.createElement('div');
-    bk.textContent='📚';
-    bk.style.cssText=`position:fixed;left:${a.left+a.width/2}px;top:${a.top+10}px;`+
-      `font-size:${20+Math.random()*14}px;z-index:55;pointer-events:none;`+
+  for(let i=0;i<count;i++){
+    const p=document.createElement('div');
+    p.textContent = emojis[i % emojis.length];
+    p.style.cssText=`position:fixed;left:${a.left+a.width/2}px;top:${a.top+10}px;`+
+      `font-size:${20+Math.random()*16}px;z-index:55;pointer-events:none;`+
       `transition:all .5s cubic-bezier(.4,0,.6,1);`;
-    document.body.appendChild(bk);
-    const delay=i*70;
+    document.body.appendChild(p);
+    const delay=i*60;
     setTimeout(()=>requestAnimationFrame(()=>{
-      bk.style.left=(b.left+b.width/2+(Math.random()-.5)*40)+'px';
-      bk.style.top=(b.top+b.height/2)+'px';
-      bk.style.transform=`rotate(${360+Math.random()*360}deg)`;
+      p.style.left=(b.left+b.width/2+(Math.random()-.5)*50)+'px';
+      p.style.top=(b.top+b.height/2+(Math.random()-.5)*30)+'px';
+      p.style.transform=`rotate(${(Math.random()-.5)*720}deg) scale(${.7+Math.random()*.8})`;
     }),delay);
-    setTimeout(()=>bk.remove(),delay+560);
+    setTimeout(()=>p.remove(),delay+560);
   }
+}
+// keep the original helper name working
+function throwBooks(){ hurl(['📚'],7); }
+// one big impact emoji that pops and fades on the enemy
+function burst(emoji){
+  const foe = $('card-foe'); if(!foe) return;
+  const r=foe.getBoundingClientRect();
+  const e=document.createElement('div');
+  e.textContent=emoji;
+  e.style.cssText=`position:fixed;left:${r.left+r.width/2}px;top:${r.top+r.height/2}px;`+
+    `transform:translate(-50%,-50%) scale(.2);font-size:64px;z-index:56;pointer-events:none;`+
+    `transition:all .45s ease;opacity:1;`;
+  document.body.appendChild(e);
+  requestAnimationFrame(()=>{e.style.transform='translate(-50%,-50%) scale(2.2)';e.style.opacity='0';});
+  setTimeout(()=>e.remove(),460);
+}
+// quick screen shake on impact
+function shake(){
+  const f=document.querySelector('.field'); if(!f||!f.animate) return;
+  f.animate([
+    {transform:'translate(0,0)'},{transform:'translate(-7px,4px)'},
+    {transform:'translate(7px,-4px)'},{transform:'translate(-4px,3px)'},{transform:'translate(0,0)'}
+  ],{duration:300,easing:'ease-out'});
 }
 function partyConfetti(){
   const colors=['#f4c542','#7b5cff','#3ddc84','#ff6f91','#1e88e5','#fff'];
