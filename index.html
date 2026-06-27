@@ -308,8 +308,9 @@
 const CONFIG = {
   // Where the meal-choice notification is sent:
   notifyEmail: "moulingautier@gmail.com",
-  // OPTIONAL: paste a free Web3Forms access key (https://web3forms.com) to
-  // auto-send the email silently. Leave "" to use the mailto fallback instead.
+  // Web3Forms access key (https://web3forms.com) — REQUIRED so the email sends
+  // silently with NO mail app opening. Get a free key in ~1 min and paste it
+  // between the quotes below. Until then, picks are saved but no email is sent.
   web3formsKey: ""
 };
 
@@ -359,28 +360,33 @@ function setHP(side, val){
 
 function setActions(html){ $('duel-actions').innerHTML = html; }
 
-/* ---------------- Duel flow (linear flowchart) ---------------- */
+/* ---------------- Duel flow (click-paced so you can read at your own speed) ----------------
+   Every story beat ends with a button. Nothing auto-advances, so the reader
+   taps "Continue ▸" only once they've finished reading the current line. */
 function startDuel(){
   foeHP=FOE_START; meHP=ME_START;
   show('screen-duel');
   setHP('foe',FOE_START); setHP('me',ME_START);
   $('foe-row').innerHTML = `<div class="empty-slot">No monster<br>on the field</div>`;
   $('me-row').innerHTML  = `<div class="empty-slot">Summon your<br>guardian</div>`;
-  foeOpensDuel();
+  step_intro();
 }
 
-async function foeOpensDuel(){
+function step_intro(){
   bubble('Gautier', "Joyeux anniversaire, little brother! 🎉 But a birthday isn't free — beat me in a duel first. I'll go easy… mostly. 😏", true);
-  setActions(`<span class="hint">Gautier summons a monster…</span>`);
-  await wait(1700);
-  $('foe-row').innerHTML = renderCard(FOE1);
-  await wait(900);
-  bubble('Gautier', "Go, Sneaky Gift Snatcher! Try to steal his presents! 😈", true);
-  await wait(1400);
-  promptSummonMarine();
+  setActions(`<button class="btn" onclick="step_foeSummon()">Continue ▸</button>`);
 }
 
-function promptSummonMarine(){
+async function step_foeSummon(){
+  setActions(`<span class="hint">Gautier summons a monster…</span>`);
+  await wait(600);
+  $('foe-row').innerHTML = renderCard(FOE1);
+  await wait(600);
+  bubble('Gautier', "Go, Sneaky Gift Snatcher! Try to steal his presents! 😈", true);
+  setActions(`<button class="btn" onclick="step_promptSummon()">Continue ▸</button>`);
+}
+
+function step_promptSummon(){
   bubble('You', "Your turn, PAM. Call your sister to the field. 💪");
   setActions(`<button class="btn" onclick="summonMarine()">✨ Summon Marine</button>`);
 }
@@ -390,7 +396,10 @@ async function summonMarine(){
   $('me-row').innerHTML = renderCard(MARINE);
   await wait(700);
   bubble('Marine', "Happy birthday, PAM!! 🥳 I came all this way to fight by your side. Nobody messes with my brother — let's win this! 💖");
-  await wait(1900);
+  setActions(`<button class="btn" onclick="step_marineReady()">Continue ▸</button>`);
+}
+
+function step_marineReady(){
   bubble('You', "Marine's ATK 2800 vs that little Snatcher (800). Attack!");
   setActions(`<button class="btn" onclick="attack(1)">⚔️ Attack the Snatcher</button>`);
 }
@@ -411,11 +420,7 @@ async function attack(phase){
     await wait(650);
     $('foe-row').innerHTML = `<div class="empty-slot">No monster<br>on the field</div>`;
     bubble('Gautier', `Argh! Direct hit — ${dmg} damage! 😣 Fine, I'll throw out one more…`, true);
-    await wait(1500);
-    $('foe-row').innerHTML = renderCard(FOE2);
-    await wait(900);
-    bubble('You', "One more push, PAM. Marine 2800 vs Party Pooper 400. Finish it! 🔥");
-    setActions(`<button class="btn" onclick="attack(2)">⚔️ Finishing Blow</button>`);
+    setActions(`<button class="btn" onclick="step_foe2()">Continue ▸</button>`);
   } else {
     const foe = $('card-foe');
     foe && foe.classList.add('dying');
@@ -427,6 +432,15 @@ async function attack(phase){
     bubble('Gautier', "GG, you got me! 🏳️ Happiest of birthdays, bro. You earned your reward. 🎂", true);
     setActions(`<button class="btn" onclick="winGame()">🎁 Claim your gift</button>`);
   }
+}
+
+async function step_foe2(){
+  setActions(`<span class="hint">Gautier summons another…</span>`);
+  await wait(600);
+  $('foe-row').innerHTML = renderCard(FOE2);
+  await wait(600);
+  bubble('You', "One more push, PAM. Marine 2800 vs Party Pooper 400. Finish it! 🔥");
+  setActions(`<button class="btn" onclick="attack(2)">⚔️ Finishing Blow</button>`);
 }
 
 function winGame(){
@@ -487,39 +501,40 @@ $('modal-confirm').addEventListener('click', async ()=>{
   $('modal-confirm').textContent = 'Redeem 🍽️';
   renderMeals();
   toast(ok ? `🎉 Nice pick! Your ${meal.title} is on the way.`
-           : `✓ ${meal.title} redeemed! (Tell Gautier if the email didn't open.)`);
+           : `✓ ${meal.title} redeemed! Gautier & Marine will sort the delivery.`);
 });
 
-/* ---- send the choice to Gautier ---- */
+/* ---- send the choice to Gautier & Marine — silent, no mail app opens ---- */
 async function notifyChoice(meal){
   const subject = `🎂 PAM redeemed his ${meal.title}!`;
   const body = `Great news — PAM just redeemed a birthday meal!\n\n`+
                `Choice: ${meal.title} ${meal.emoji}\n`+
                `When: ${new Date().toLocaleString()}\n\n`+
                `Time to get it delivered to his home. 🍽️\n\n— The Birthday Duel app`;
-  // Preferred: silent auto-send via Web3Forms (if a key is configured)
-  if(CONFIG.web3formsKey){
-    try{
-      const res = await fetch('https://api.web3forms.com/submit',{
-        method:'POST',
-        headers:{'Content-Type':'application/json',Accept:'application/json'},
-        body:JSON.stringify({
-          access_key:CONFIG.web3formsKey,
-          subject,
-          from_name:"PAM's Birthday Duel",
-          email:CONFIG.notifyEmail,
-          message:body,
-          meal_choice:meal.title
-        })
-      });
-      const data = await res.json();
-      if(data.success) return true;
-    }catch(e){ /* fall through to mailto */ }
+  if(!CONFIG.web3formsKey){
+    console.warn('No CONFIG.web3formsKey set — meal saved but no email sent.');
+    return false;
   }
-  // Fallback: open a pre-filled email the user can send
-  const url = `mailto:${CONFIG.notifyEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href = url;
-  return false;
+  // Silent auto-send via Web3Forms — no mailto, nothing for PAM to tap.
+  try{
+    const res = await fetch('https://api.web3forms.com/submit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Accept:'application/json'},
+      body:JSON.stringify({
+        access_key:CONFIG.web3formsKey,
+        subject,
+        from_name:"PAM's Birthday Duel",
+        email:CONFIG.notifyEmail,
+        message:body,
+        meal_choice:meal.title
+      })
+    });
+    const data = await res.json();
+    return !!data.success;
+  }catch(e){
+    console.error('Email send failed:', e);
+    return false;
+  }
 }
 
 function resetGift(e){
