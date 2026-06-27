@@ -27,11 +27,12 @@ Add this CSS so images fill the slot neatly:
 ---
 
 ## 🦸‍♀️ Marine — "Birthday Guardian" (the hero card)  · 1024×1024 (square)
-> A heroic young woman guardian standing tall and confident, glowing golden aura,
-> protective older-sister energy, flowing cape catching the wind, one fist raised,
-> radiant birthday-themed armor with subtle star and ribbon motifs, warm and kind
-> but fierce expression. *(Customize: hair color/length, eye color, skin tone to
-> match the real Marine.)* — then append the **Shared style** block.
+> A heroic young woman guardian mid-action, **hurling a swirling barrage of glowing
+> magical textbooks** at an unseen enemy, dynamic throwing pose, flying book pages
+> and golden sparks trailing the books, protective big-sister energy, birthday-
+> themed armor with subtle star and ribbon motifs, fierce confident expression.
+> *(Customize hair color/length, eye color, skin tone to match the real Marine.)*
+> — then append the **Shared style** block.
 
 ## 😈 Sneaky Gift Snatcher — weak foe #1 (FOE1)  · 1024×1024 (square)
 > A small mischievous cartoon fiend imp, sneaky grin, oversized eyes, tiptoeing
@@ -43,15 +44,17 @@ Add this CSS so images fill the slot neatly:
 > arms, a tiny rain cloud over its head, surrounded by popped party streamers,
 > sour pouty face, harmless and silly, muted red-and-grey tones. — append **Shared style**.
 
-## 🧑‍💼 Gautier — the Challenger avatar  · 512×512 (square, head & shoulders)
-> Confident playful duelist striking a "come at me" pose, smirking friendly
-> rival expression, holding a single glowing card, brotherly mischievous charm.
-> *(Customize to look like the real Gautier.)* — append **Shared style**.
+## 👨‍🦲 Gautier — the Challenger avatar  · 512×512 (square, head & shoulders)
+> Confident playful **bald** duelist with a clean shaved head, striking a "come at
+> me" pose, smirking friendly rival expression, holding a single glowing card,
+> brotherly mischievous charm. *(Customize to look like the real Gautier.)* — append **Shared style**.
 
-## 🎂 PAM — the Birthday Boy avatar  · 512×512 (square, head & shoulders)
-> A happy young man wearing a small party hat, big celebratory smile, confetti
-> drifting around him, hero-of-the-day glow. *(Customize hair, eyes, skin tone,
-> glasses/beard to match the real PAM.)* — append **Shared style**.
+## 🎮 PAM — the Birthday Boy avatar  · 512×512 (square, head & shoulders)
+> An athletic young man with a **gamer-meets-gym** vibe — fit and muscular, wearing
+> a gaming headset and a fitted athletic tee, holding a game controller, small
+> party hat, big celebratory smile, confetti and neon game-glow around him, hero-
+> of-the-day energy. *(Customize hair, eyes, skin tone, beard to match the real PAM.)*
+> — append **Shared style**.
 
 ---
 
